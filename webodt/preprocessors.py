@@ -2,6 +2,7 @@
 from django.utils.importlib import import_module
 from cStringIO import StringIO
 from lxml import etree
+from helpers import pixels2inchs
 import re
 
 
@@ -101,6 +102,38 @@ def xmlfor_preprocessor(template_content):
         ancestor_tail = ancestor_tag.tail or ''
         ancestor_tag.tail = u'%s%s' % (u'{% endfor %}', ancestor_tail)
     return _tree_to_string(tree)
+
+
+def img_preprocessor(template_content):
+
+    img_tag_re = re.compile(r'({%\s*img([^%]*)%})')
+    img_re = re.compile(r'\s*([^ ]+)\s+(\d+)\s+(\d+)')
+
+    for img_all, img_tags in img_tag_re.findall(template_content):
+        img = img_re.match(img_tags)
+        if img:
+            field, width, height = img.groups()
+
+        args = {'width': pixels2inchs(int(width)),
+                'height': pixels2inchs(int(height)),
+                'name': field}
+
+        text = r'''
+            <draw:frame text:anchor-type="as-char" draw:z-index="0"
+             draw:style-name="graphic1"
+             svg:width="{width}in"
+             svg:height="{height}in">
+                <draw:image xlink:href="Pictures/{{{{ {name} }}}}"
+                            xlink:type="simple"
+                            xlink:show="embed"
+                            xlink:actuate="onLoad"/>
+            </draw:frame>'''.format(**args)
+
+        template_content = re.sub(img_all, text, template_content)
+        pass
+
+    return template_content
+
 
 def _find_common_ancestor(tag1, tag2):
     for ancestor in tag1.iterancestors():

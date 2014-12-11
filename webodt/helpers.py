@@ -34,3 +34,10 @@ def guess_format_and_filename(filename, format):
         lowlevel_fd, filename = tempfile.mkstemp(suffix = '.' + format, dir=WEBODT_TMP_DIR)
         os.close(lowlevel_fd)
     return filename, format
+
+
+def pixels2inchs(v):
+    """
+    1 inch [in] = 96.0000000000011 pixel (Y)
+    """
+    return v / 96.0000000000011

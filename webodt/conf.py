@@ -12,5 +12,6 @@ WEBODT_TMP_DIR = getattr(settings, 'WEBODT_TMP_DIR', None)
 WEBODT_CACHE_DIR = getattr(settings, 'WEBODT_CACHE_DIR', '/tmp/webodt_cache')
 WEBODT_ODF_TEMPLATE_PREPROCESSORS = getattr(settings, 'WEBODT_ODF_TEMPLATE_PREPROCESSORS', [
     'webodt.preprocessors.xmlfor_preprocessor',
+    'webodt.preprocessors.img_preprocessor',
     'webodt.preprocessors.unescape_templatetags_preprocessor',
 ])

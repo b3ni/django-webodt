@@ -115,7 +115,7 @@ class ODFTemplate(object):
         for f_to_process in self.get_files_to_process():
             template = self.get_file(f_to_process)
             for preprocess_func in list_preprocessors(self.preprocessors):
-                template = preprocess_func(template)
+                template = preprocess_func(template, context)
             template = Template(template)
             xml_result = template.render(context)
             filename = os.path.join(tmpdir, f_to_process)
