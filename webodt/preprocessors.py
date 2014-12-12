@@ -38,7 +38,8 @@ def unescape_templatetags_preprocessor(template_content):
             template_content = template_content.replace(
                 '{{%s}}' % include_text, '{{%s}}' % new_include_text
             )
-    return template_content
+    return template_content, {}
+
 
 def xmlfor_preprocessor(template_content):
     tree = etree.parse(StringIO(template_content))
@@ -101,7 +102,7 @@ def xmlfor_preprocessor(template_content):
         # after
         ancestor_tail = ancestor_tag.tail or ''
         ancestor_tag.tail = u'%s%s' % (u'{% endfor %}', ancestor_tail)
-    return _tree_to_string(tree)
+    return _tree_to_string(tree), {}
 
 
 def img_preprocessor(template_content):
@@ -109,30 +110,33 @@ def img_preprocessor(template_content):
     img_tag_re = re.compile(r'({%\s*img([^%]*)%})')
     img_re = re.compile(r'\s*([^ ]+)\s+(\d+)\s+(\d+)')
 
+    images = {}
     for img_all, img_tags in img_tag_re.findall(template_content):
         img = img_re.match(img_tags)
         if img:
             field, width, height = img.groups()
 
-        args = {'width': pixels2inchs(int(width)),
-                'height': pixels2inchs(int(height)),
-                'name': field}
+            args = {'width': pixels2inchs(int(width)),
+                    'height': pixels2inchs(int(height)),
+                    'name': field,
+                    'compute_name': 'pepe'}
 
-        text = r'''
+            text = r'''
             <draw:frame text:anchor-type="as-char" draw:z-index="0"
              draw:style-name="graphic1"
-             svg:width="{width}in"
-             svg:height="{height}in">
-                <draw:image xlink:href="Pictures/{{{{ {name} }}}}"
+             svg:width="''' + str(args['width']) + '''in"
+             svg:height="''' + str(args['height']) + '''in">
+                <draw:image xlink:href="PicturesModels/''' + \
+                args['compute_name'] + '''"
                             xlink:type="simple"
                             xlink:show="embed"
                             xlink:actuate="onLoad"/>
-            </draw:frame>'''.format(**args)
+            </draw:frame>'''
 
-        template_content = re.sub(img_all, text, template_content)
-        pass
+            template_content = re.sub(img_all, text, template_content)
+            images[field] = args
 
-    return template_content
+    return template_content, images
 
 
 def _find_common_ancestor(tag1, tag2):

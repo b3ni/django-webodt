@@ -15,6 +15,7 @@ import time
 from lxml import etree
 from cStringIO import StringIO
 from django.template import Template
+from django.db.models.fields.files import ImageFieldFile
 from django.utils.encoding import smart_str
 from webodt.conf import WEBODT_TEMPLATE_PATH, WEBODT_ODF_TEMPLATE_PREPROCESSORS, WEBODT_TMP_DIR
 from webodt.preprocessors import list_preprocessors
@@ -95,29 +96,42 @@ class ODFTemplate(object):
         """ Return the styles.xml file contents """
         return self.handler.get_styles_xml()
 
-    def get_file(self,path):
+    def get_file(self, path):
         return self.handler.get_file(path)
 
-    def get_files_to_process(self):
+    def get_files_to_process(self, typef='text/xml'):
         #parse manifest
         paths = []
+        ns = '{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}'
         ee = etree.parse(StringIO(self.get_file("META-INF/manifest.xml")))
-        for xml_ref in ee.findall("//{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}file-entry[@{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}media-type='text/xml']"):
-            paths.append(xml_ref.attrib['{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}full-path'])
+        xpath = "//{ns}file-entry[@{ns}media-type='{typef}']" \
+            .format(ns=ns, typef=typef)
+        for xml_ref in ee.findall(xpath):
+            paths.append(xml_ref.attrib['{ns}full-path'.format(ns=ns)])
         return paths
+
+    def get_files_images(self):
+        return self.get_files_to_process(typef='images/png')
 
     def render(self, context, delete_on_close=True):
         """ Return rendered ODF (webodt.ODFDocument instance)"""
         # create temp output directory
         tmpdir = tempfile.mkdtemp()
         self.handler.unpack(tmpdir)
+
         # store updated content.xml
         for f_to_process in self.get_files_to_process():
             template = self.get_file(f_to_process)
             for preprocess_func in list_preprocessors(self.preprocessors):
-                template = preprocess_func(template, context)
+                template, images = preprocess_func(template)
+                if len(images):
+                    if not os.path.exists(os.path.join(tmpdir, 'PicturesModels')):
+                        os.mkdir(os.path.join(tmpdir, 'PicturesModels'))
+                    self.prepare_images(images, context, tmpdir)
+
             template = Template(template)
             xml_result = template.render(context)
+
             filename = os.path.join(tmpdir, f_to_process)
             result_fd = open(filename, 'w')
             result_fd.write(smart_str(xml_result))
@@ -132,11 +146,41 @@ class ODFTemplate(object):
                 os.utime(path, (self._fake_timestamp, self._fake_timestamp))
                 fn = os.path.relpath(path, tmpdir)
                 tmpzipfile.write(path, fn)
+
         tmpzipfile.close()
         # remove directory tree
         shutil.rmtree(tmpdir)
         # return ODF document
         return ODFDocument(tmpfile, delete_on_close=delete_on_close)
+
+    def prepare_images(self, images, context, tmpdir):
+        from PIL import Image
+
+        # with open(os.path.join(tmpdir, "META-INF", "manifest.xml"), "rw") as f:
+        #     root = etree.parse(f.read())
+
+        new_images = []
+        for key, values in images.items():
+            value = None
+            if '.' in values['name']:
+                model_name, field = values['name'].split('.')
+                model = context.get(model_name)
+                if model:
+                    value = getattr(model, field)
+            else:
+                value = context.get(values['name'])
+
+            if not isinstance(value, ImageFieldFile):
+                raise Exception(
+                    u"El campo {} no es de tipo ImageFieldFile"
+                    .format(values['name']))
+
+            if value.file:
+                name = os.path.join(tmpdir, 'PicturesModels', values['compute_name'])
+                Image.open(value.file).save()
+                new_images.append(name)
+
+            context[values['compute_name']] = '1.png'
 
 
 class _PackedODFHandler(object):
@@ -197,7 +241,7 @@ class _UnpackedODFHandler(object):
         fd.close()
         return data
 
-    def get_file(self,path):
+    def get_file(self, path):
         fd = open(os.path.join(self.dirname, path), 'r')
         data = fd.read()
         fd.close()
