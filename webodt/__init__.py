@@ -17,7 +17,8 @@ from cStringIO import StringIO
 from django.template import Template
 from django.db.models.fields.files import ImageFieldFile
 from django.utils.encoding import smart_str
-from webodt.conf import WEBODT_TEMPLATE_PATH, WEBODT_ODF_TEMPLATE_PREPROCESSORS, WEBODT_TMP_DIR
+from webodt.conf import (WEBODT_TEMPLATE_PATH,
+                         WEBODT_ODF_TEMPLATE_PREPROCESSORS, WEBODT_TMP_DIR)
 from webodt.preprocessors import list_preprocessors
 
 
@@ -126,7 +127,8 @@ class ODFTemplate(object):
             for preprocess_func in list_preprocessors(self.preprocessors):
                 template, images = preprocess_func(template)
                 if len(images):
-                    if not os.path.exists(os.path.join(tmpdir, 'PicturesModels')):
+                    if not os.path.exists(os.path.join(tmpdir,
+                                                       'PicturesModels')):
                         os.mkdir(os.path.join(tmpdir, 'PicturesModels'))
                     self.prepare_images(images, context, tmpdir)
 
@@ -138,7 +140,8 @@ class ODFTemplate(object):
             result_fd.write(smart_str(xml_result))
             result_fd.close()
 
-        lowlevel_fd, tmpfile = tempfile.mkstemp(suffix='.odt', dir=WEBODT_TMP_DIR)
+        lowlevel_fd, tmpfile = tempfile.mkstemp(suffix='.odt',
+                                                dir=WEBODT_TMP_DIR)
         os.close(lowlevel_fd)
         tmpzipfile = zipfile.ZipFile(tmpfile, 'w')
         for root, _, files in os.walk(tmpdir):

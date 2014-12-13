@@ -9,10 +9,10 @@ from webodt.helpers import get_mimetype
 
 import webodt
 
+
 def render_to(format, template_name,
-        dictionary=None, context_instance=None, delete_on_close=True,
-        cache=CacheManager, preprocessors=None
-    ):
+              dictionary=None, context_instance=None, delete_on_close=True,
+              cache=CacheManager, preprocessors=None):
     """
     Convert the template given by :attr:`template_name` and :attr:`dictionary`
     to a document in given :attr:`format`. The document (file-like object) will
@@ -27,11 +27,12 @@ def render_to(format, template_name,
     :keyword delete_on_close: Flag which defines whether the returned document
                               should be deleted automatically when closed.
 
-    :keyword preprocessors: List of preprocessors overriding :attr:`WEBODT_ODF_TEMPLATE_PREPROCESSORS`
-                            settings variable.  Suitable for ODF documents only.
+    :keyword preprocessors: List of preprocessors overriding
+                            :attr:`WEBODT_ODF_TEMPLATE_PREPROCESSORS`
+                            settings variable. Suitable for ODF documents only.
 
-    If the :attr:`template_name` ends with ".html", template is considered as HTML
-    template, otherwise as ODF based template.
+    If the :attr:`template_name` ends with ".html", template is considered as
+    HTML template, otherwise as ODF based template.
     """
     template = _Template(template_name, preprocessors=preprocessors)
     dictionary = dictionary or {}
@@ -39,25 +40,28 @@ def render_to(format, template_name,
         context_instance.update(dictionary)
     else:
         context_instance = Context(dictionary)
-    document = template.render(context_instance, delete_on_close=delete_on_close)
+    document = template.render(context_instance,
+                               delete_on_close=delete_on_close)
     formatted_document = None
     if cache:
         cache_mgr = cache()
         formatted_document = cache_mgr.get(document, format)
     if not formatted_document:
-        formatted_document = converter().convert(document, format, delete_on_close=delete_on_close)
+        formatted_document = converter().convert(
+            document, format, delete_on_close=delete_on_close)
         if cache:
             cache_mgr.set(document, format, formatted_document)
     document.close()
     return formatted_document
 
 
-def render_to_response(template_name,
+def render_to_response(
+        template_name,
         dictionary=None, context_instance=None, filename=None, format='odt',
-        cache=CacheManager, preprocessors=None, inline=None, iterator=False,
-    ):
+        cache=CacheManager, preprocessors=None, inline=None, iterator=False):
     """
-    Using same options as :func:`render_to`, return :class:`django.http.HttpResponse`
+    Using same options as :func:`render_to`, return
+    :class:`django.http.HttpResponse`
     object. The document is automatically removed after the last byte of the
     response have been read.
 
@@ -71,7 +75,8 @@ def render_to_response(template_name,
     <https://code.djangoproject.com/ticket/6527>`_ for more details.
     """
     mimetype = get_mimetype(format)
-    content_fd = render_to(format, template_name, dictionary, context_instance,
+    content_fd = render_to(
+        format, template_name, dictionary, context_instance,
         delete_on_close=True, cache=cache, preprocessors=preprocessors
     )
     if iterator:

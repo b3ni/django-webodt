@@ -31,7 +31,8 @@ def guess_format_and_filename(filename, format):
         format = WEBODT_DEFAULT_FORMAT
     # filename is undefined
     if not filename:
-        lowlevel_fd, filename = tempfile.mkstemp(suffix = '.' + format, dir=WEBODT_TMP_DIR)
+        lowlevel_fd, filename = tempfile.mkstemp(suffix='.' + format,
+                                                 dir=WEBODT_TMP_DIR)
         os.close(lowlevel_fd)
     return filename, format
 
