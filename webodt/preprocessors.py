@@ -111,6 +111,7 @@ def img_preprocessor(template_content):
     img_re = re.compile(r'\s*([^ ]+)\s+(\d+)\s+(\d+)')
 
     images = {}
+    images_count = 0
     for img_all, img_tags in img_tag_re.findall(template_content):
         img = img_re.match(img_tags)
         if img:
@@ -119,7 +120,8 @@ def img_preprocessor(template_content):
             args = {'width': pixels2inchs(int(width)),
                     'height': pixels2inchs(int(height)),
                     'name': field,
-                    'compute_name': 'pepe'}
+                    'compute_name': '{}.png'.format(images_count)}
+            images_count += 1
 
             text = r'''
             <draw:frame text:anchor-type="as-char" draw:z-index="0"

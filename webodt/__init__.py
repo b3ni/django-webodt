@@ -62,7 +62,7 @@ class ODFTemplate(object):
 
     format = 'odt'
     content_type = 'application/vnd.oasis.opendocument.text'
-    _fake_timestamp = time.mktime((2010,1,1,0,0,0,0,0,0))
+    _fake_timestamp = time.mktime((2010, 1, 1, 0, 0, 0, 0, 0, 0))
 
     def __init__(self, template_name, preprocessors=None):
         """ Create object by the template name. The template name is relative
@@ -82,7 +82,8 @@ class ODFTemplate(object):
             self.packed = False
             self.handler = _UnpackedODFHandler(self.template_path)
         else:
-            raise ValueError('Template %s not found in directory %s' % (template_name, WEBODT_TEMPLATE_PATH))
+            raise ValueError('Template %s not found in directory %s' %
+                             (template_name, WEBODT_TEMPLATE_PATH))
 
     def get_content_xml(self):
         """ Return the content.xml file contents """
@@ -156,9 +157,6 @@ class ODFTemplate(object):
     def prepare_images(self, images, context, tmpdir):
         from PIL import Image
 
-        # with open(os.path.join(tmpdir, "META-INF", "manifest.xml"), "rw") as f:
-        #     root = etree.parse(f.read())
-
         new_images = []
         for key, values in images.items():
             value = None
@@ -176,11 +174,40 @@ class ODFTemplate(object):
                     .format(values['name']))
 
             if value.file:
-                name = os.path.join(tmpdir, 'PicturesModels', values['compute_name'])
-                Image.open(value.file).save()
-                new_images.append(name)
+                name = os.path.join(tmpdir, 'PicturesModels',
+                                    values['compute_name'])
+                Image.open(value.file).save(name)
+                new_images.append(os.path.join('PicturesModels',
+                                  values['compute_name']))
 
-            context[values['compute_name']] = '1.png'
+        if new_images:
+            # añadimos imagen al manifest
+            with open(os.path.join(tmpdir, "META-INF", "manifest.xml"),
+                      "r") as f:
+                xml = etree.parse(StringIO(f.read()))
+                root = xml.getroot()
+
+            # añadimos nodos
+            ns = '{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}'
+            for img in new_images:
+                attr = {'{ns}media-type'.format(ns=ns): 'image/png',
+                        '{ns}full-path'.format(ns=ns): img}
+                root.append(etree.Element("{ns}file-entry".format(ns=ns),
+                                          **attr))
+
+            # escribrimos
+            doctype = \
+                '<!DOCTYPE manifest:manifest PUBLIC "-//OpenOffice.org//DTD ' \
+                'Manifest 1.0//EN" "Manifest.dtd">'
+
+            with open(os.path.join(tmpdir, "META-INF", "manifest.xml"),
+                      "w") as f:
+                tree = etree.tostring(xml,
+                                      xml_declaration=True,
+                                      encoding='UTF-8',
+                                      pretty_print=True,
+                                      doctype=doctype)
+                f.write(tree)
 
 
 class _PackedODFHandler(object):
