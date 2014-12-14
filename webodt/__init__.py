@@ -176,7 +176,7 @@ class ODFTemplate(object):
                     u"El campo {} no es de tipo ImageFieldFile"
                     .format(values['name']))
 
-            if value.file:
+            if hasattr(value, 'file') and value.file:
                 name = os.path.join(tmpdir, 'PicturesModels',
                                     values['compute_name'])
                 Image.open(value.file).save(name)
